@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>公安联考选岗剩余量统计</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        body {
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        /* 感谢语 */
+        .thanks-box {
+            background-color: #fff5f5;
+            border: 2px solid #ff6b6b;
+            padding: 20px;
+            margin-bottom: 20px;
+            font-size: 22px;
+            font-weight: bold;
+            color: #d63031;
+            text-align: center;
+            border-radius: 8px;
+        }
+        /* 使用说明 - 可折叠 */
+        .help-section {
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .help-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+        .help-header:hover {
+            opacity: 0.95;
+        }
+        .help-header .arrow {
+            transition: transform 0.3s;
+        }
+        .help-header.collapsed .arrow {
+            transform: rotate(-90deg);
+        }
+        .help-content {
+            background: #f8f9fa;
+            padding: 0;
+            max-height: 1000px;
+            overflow: hidden;
+            transition: max-height 0.3s, padding 0.3s;
+        }
+        .help-content.collapsed {
+            max-height: 0;
+            padding: 0 15px;
+        }
+        .help-content-inner {
+            padding: 15px;
+        }
+        .help-content h4 {
+            color: #333;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #667eea;
+        }
+        .help-content ul {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+        .help-content li {
+            margin-bottom: 5px;
+        }
+        .help-content .tip {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px 12px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .help-content .important {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 10px 12px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        /* 按钮组 */
+        .btn-group {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 8px 16px;
+            background-color: #2d8cf0;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn:hover {
+            background-color: #1b74d1;
+            transform: translateY(-1px);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .btn-danger {
+            background-color: #f56c6c;
+        }
+        .btn-danger:hover {
+            background-color: #e45656;
+        }
+        .btn-success {
+            background-color: #67c23a;
+        }
+        .btn-success:hover {
+            background-color: #5daf34;
+        }
+        .btn-warning {
+            background-color: #e6a23c;
+        }
+        .btn-warning:hover {
+            background-color: #cf9236;
+        }
+        .btn-secondary {
+            background-color: #909399;
+        }
+        .btn-secondary:hover {
+            background-color: #7a7d82;
+        }
+        /* 表格 */
+        .table-container {
+            overflow-x: auto;
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1000px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px 6px;
+            text-align: center;
+            font-size: 14px;
+        }
+        th {
+            background-color: #f0f5ff;
+            font-weight: bold;
+            color: #333;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        th:first-child, td:first-child {
+            position: sticky;
+            left: 0;
+            background: inherit;
+            z-index: 5;
+        }
+        th:first-child {
+            z-index: 15;
+        }
+        /* 剩余量为0时整行变红 */
+        .row-zero {
+            background-color: #ffebee !important;
+        }
+        .row-zero td {
+            color: #c62828 !important;
+            font-weight: bold;
+        }
+        .row-zero input {
+            background-color: transparent !important;
+            color: #c62828 !important;
+            font-weight: bold;
+        }
+        .row-zero td:first-child {
+            background-color: #ffebee !important;
+        }
+        /* 输入框统一样式 */
+        input {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 14px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #2d8cf0;
+            box-shadow: 0 0 0 2px rgba(45, 140, 240, 0.2);
+        }
+        /* 目标岗位加宽 */
+        td:nth-child(1) input {
+            width: 160px;
+        }
+        /* 岗位数 + 剩余量 */
+        td:nth-child(2) input,
+        td:nth-child(3) input {
+            width: 70px;
+            font-size: 15px;
+            font-weight: bold;
+        }
+        /* 计数框 */
+        td:nth-child(n+4) input {
+            width: 50px;
+            text-align: center;
+        }
+        input:disabled {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+            color: #495057;
+        }
+        input.locked {
+            background-color: #d4edda !important;
+            border-color: #28a745 !important;
+            color: #155724 !important;
+            cursor: pointer;
+        }
+        .readonly-input {
+            background-color: #f2f2f2 !important;
+        }
+        /* 操作按钮列 */
+        .action-col {
+            width: 60px;
+        }
+        .btn-reset {
+            padding: 4px 8px;
+            font-size: 12px;
+            background-color: #17a2b8;
+        }
+        .btn-reset:hover {
+            background-color: #138496;
+        }
+        /* 状态提示 */
+        .status-bar {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 8px 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .status-bar .stats {
+            display: flex;
+            gap: 20px;
+        }
+        .status-bar .auto-save {
+            color: #67c23a;
+            font-weight: 500;
+        }
+        .status-bar .auto-save.saving {
+            color: #e6a23c;
+        }
+        /* 确认对话框 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal-box {
+            background: white;
+            padding: 25px 30px;
+            border-radius: 8px;
+            max-width: 450px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .modal-box h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 18px;
+        }
+        .modal-box p {
+            margin-bottom: 20px;
+            color: #666;
+            line-height: 1.6;
+        }
+        .modal-btns {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        /* 打印样式 */
+        @media print {
+            body {
+                padding: 10px;
+                background: white;
+            }
+            .btn-group, .status-bar, .help-section, .action-col {
+                display: none !important;
+            }
+            .table-container {
+                box-shadow: none;
+                padding: 0;
+            }
+            .thanks-box {
+                border: 2px solid #000;
+                background: #f9f9f9;
+            }
+            th, td {
+                border: 1px solid #000;
+            }
+            input {
+                border: none !important;
+                background: transparent !important;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container" id="app">
+    <div class="thanks-box">
+        感谢"好阳哥86"、"1978"、"放学别走"几位老师三年来的无私奉献与陪伴！<br>
+        23级网络安全与执法学生制作
+    </div>
+
+    <!-- 可折叠使用说明 -->
+    <div class="help-section">
+        <div class="help-header" id="helpHeader">
+            <span>📖 使用说明（点击展开/收起）</span>
+            <span class="arrow">▼</span>
+        </div>
+        <div class="help-content" id="helpContent">
+            <div class="help-content-inner">
+                <h4>一、基础操作</h4>
+                <ul>
+                    <li><strong>目标岗位：</strong>填写岗位名称，如"衡水市公安局/桃城区/冀州区"</li>
+                    <li><strong>岗位数：</strong>输入该岗位的总招聘人数，"剩余量"会自动同步</li>
+                    <li><strong>计数框：</strong>每录取1人，在对应的计数框输入<strong>1</strong>，输入后自动锁定并扣减剩余量</li>
+                    <li><strong>剩余量：</strong>自动计算显示，为0时整行变红提醒</li>
+                </ul>
+
+                <div class="tip">
+                    <strong>💡 提示：</strong>数据会自动保存到浏览器本地，刷新页面不会丢失！建议定期点击"导出数据"备份。
+                </div>
+
+                <h4>二、错误修正（重要！）</h4>
+                <ul>
+                    <li><strong>解锁计数框：</strong>如果误输"1"，可以<strong>双击</strong>该绿色锁定框，确认后解锁并恢复剩余量</li>
+                    <li><strong>重置本行：</strong>点击每行最后的"重置"按钮，可清空该行所有计数并恢复剩余量</li>
+                    <li><strong>撤销上一步：</strong>点击"撤销"按钮可撤销最近一次操作（支持撤销多步）</li>
+                </ul>
+
+                <div class="important">
+                    <strong>⚠️ 注意：</strong>双击解锁计数框时需要确认，请谨慎操作避免误删数据。
+                </div>
+
+                <h4>三、数据管理</h4>
+                <ul>
+                    <li><strong>导出数据：</strong>将当前数据导出为JSON文件，用于备份或迁移</li>
+                    <li><strong>导入数据：</strong>从之前导出的JSON文件恢复数据</li>
+                    <li><strong>清空数据：</strong>一键清空所有数据（需确认），慎用！</li>
+                    <li><strong>打印：</strong>生成打印版本，自动隐藏操作按钮</li>
+                </ul>
+
+                <h4>四、快捷键</h4>
+                <ul>
+                    <li><strong>Ctrl+Z：</strong>撤销上一步操作</li>
+                    <li><strong>Ctrl+S：</strong>手动保存数据</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <div class="stats">
+            <span>岗位数：<strong id="postCount">0</strong></span>
+            <span>计数列：<strong id="colCount">20</strong></span>
+            <span>已记录：<strong id="recordedCount">0</strong></span>
+        </div>
+        <div class="auto-save" id="autoSaveStatus">✓ 已自动保存</div>
+    </div>
+
+    <div class="btn-group">
+        <button class="btn" id="addPostBtn">➕ 添加岗位行</button>
+        <button class="btn btn-danger" id="delPostBtn">➖ 减少岗位行</button>
+        <button class="btn" id="addColBtn">➕ 添加计数列</button>
+        <span style="margin: 0 10px; color: #ccc;">|</span>
+        <button class="btn btn-secondary" id="undoBtn">↩️ 撤销</button>
+        <span style="margin: 0 10px; color: #ccc;">|</span>
+        <button class="btn btn-success" id="exportBtn">📥 导出数据</button>
+        <button class="btn btn-warning" id="importBtn">📤 导入数据</button>
+        <button class="btn btn-danger" id="clearBtn">🗑️ 清空数据</button>
+        <button class="btn" id="printBtn">🖨️ 打印</button>
+    </div>
+
+    <div class="table-container">
+        <table id="statTable">
+            <thead><tr id="tableHeader"></tr></thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 确认对话框 -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box">
+        <h3 id="modalTitle">确认操作</h3>
+        <p id="modalContent">确定要执行此操作吗？</p>
+        <div class="modal-btns">
+            <button class="btn btn-secondary" id="modalCancel">取消</button>
+            <button class="btn btn-danger" id="modalConfirm">确定</button>
+        </div>
+    </div>
+</div>
+
+<!-- 隐藏的文件输入 -->
+<input type="file" id="fileInput" accept=".json" style="display:none">
+
+<script>
+(function() {
+    'use strict';
+
+    // ===== 配置 =====
+    const CONFIG = {
+        INIT_POST_ROWS: 5,
+        INIT_COUNT_COLS: 20,
+        STORAGE_KEY: 'gangwei_stat_data_v3',
+        AUTO_SAVE_DELAY: 500,
+        MAX_UNDO_HISTORY: 50
+    };
+
+    // ===== 状态管理 =====
+    let state = {
+        countCols: CONFIG.INIT_COUNT_COLS,
+        rows: [],
+        undoHistory: []
+    };
+
+    // ===== DOM元素 =====
+    const $ = id => document.getElementById(id);
+    const theadRow = $('tableHeader');
+    const tbody = $('tableBody');
+
+    // ===== 历史记录（撤销功能）=====
+    function saveHistory() {
+        const snapshot = JSON.stringify(collectData());
+        state.undoHistory.push(snapshot);
+        if (state.undoHistory.length > CONFIG.MAX_UNDO_HISTORY) {
+            state.undoHistory.shift();
+        }
+    }
+
+    function undo() {
+        if (state.undoHistory.length === 0) {
+            showModal('无法撤销', '没有可撤销的操作！', false);
+            return;
+        }
+        const snapshot = state.undoHistory.pop();
+        const data = JSON.parse(snapshot);
+        applyData(data);
+        saveData();
+        showModal('撤销成功', '已恢复到上一步操作！', false);
+    }
+
+    // ===== 本地存储 =====
+    function saveData() {
+        const data = collectData();
+        localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(data));
+        showSaveStatus('saving');
+        setTimeout(() => showSaveStatus('saved'), 300);
+    }
+
+    function loadData() {
+        try {
+            const saved = localStorage.getItem(CONFIG.STORAGE_KEY);
+            if (saved) {
+                const data = JSON.parse(saved);
+                if (data && data.rows) {
+                    return data;
+                }
+            }
+        } catch (e) {
+            console.error('加载数据失败:', e);
+        }
+        return null;
+    }
+
+    function collectData() {
+        const rows = [];
+        tbody.querySelectorAll('tr').forEach(tr => {
+            const inputs = tr.querySelectorAll('input');
+            const rowData = {
+                post: inputs[0]?.value || '',
+                num: inputs[1]?.value || '',
+                remain: inputs[2]?.value || '',
+                counts: []
+            };
+            // counts 从第4个输入框开始（跳过岗位、岗位数、剩余量、重置按钮）
+            for (let i = 3; i < inputs.length; i++) {
+                rowData.counts.push(inputs[i].value);
+            }
+            rows.push(rowData);
+        });
+        return { countCols: state.countCols, rows };
+    }
+
+    function applyData(data) {
+        state.countCols = data.countCols || CONFIG.INIT_COUNT_COLS;
+        state.rows = data.rows || [];
+        tbody.innerHTML = '';
+        buildHeader();
+        state.rows.forEach(row => createRow(row));
+        updateStats();
+    }
+
+    function showSaveStatus(status) {
+        const el = $('autoSaveStatus');
+        if (status === 'saving') {
+            el.textContent = '⏳ 保存中...';
+            el.classList.add('saving');
+        } else {
+            el.textContent = '✓ 已自动保存';
+            el.classList.remove('saving');
+        }
+    }
+
+    // ===== 统计更新 =====
+    function updateStats() {
+        $('postCount').textContent = tbody.rows.length;
+        $('colCount').textContent = state.countCols;
+        
+        // 计算已记录总数
+        let recorded = 0;
+        tbody.querySelectorAll('tr').forEach(tr => {
+            const inputs = tr.querySelectorAll('td:nth-child(n+5) input'); // 跳过岗位、岗位数、剩余量、操作列
+            inputs.forEach(input => {
+                if (input.value === '1') recorded++;
+            });
+        });
+        $('recordedCount').textContent = recorded;
+    }
+
+    // ===== 表格渲染 =====
+    function buildHeader() {
+        theadRow.innerHTML = `
+            <th>目标岗位</th>
+            <th>岗位数</th>
+            <th>剩余量</th>
+            <th class="action-col">操作</th>
+        `;
+        for (let i = 1; i <= state.countCols; i++) {
+            const th = document.createElement('th');
+            th.textContent = '计' + i;
+            theadRow.appendChild(th);
+        }
+    }
+
+    function createRow(data = null) {
+        const tr = document.createElement('tr');
+        const colCount = theadRow.children.length;
+
+        // 目标岗位
+        let td = document.createElement('td');
+        td.innerHTML = `<input type="text" placeholder="衡水市公安局/桃城区..." value="${data?.post || ''}">`;
+        tr.appendChild(td);
+
+        // 岗位数
+        td = document.createElement('td');
+        td.innerHTML = `<input type="number" min="0" value="${data?.num || ''}" oninput="window.syncRemain(this)">`;
+        tr.appendChild(td);
+
+        // 剩余量
+        td = document.createElement('td');
+        td.innerHTML = `<input type="number" class="readonly-input" readonly value="${data?.remain || ''}">`;
+        tr.appendChild(td);
+
+        // 操作列（重置按钮）
+        td = document.createElement('td');
+        td.className = 'action-col';
+        td.innerHTML = `<button class="btn btn-reset" onclick="window.resetRow(this)">重置</button>`;
+        tr.appendChild(td);
+
+        // 计数列
+        for (let i = 0; i < state.countCols; i++) {
+            td = document.createElement('td');
+            const val = data?.counts?.[i] || '';
+            const locked = val === '1';
+            td.innerHTML = `<input type="text" value="${val}" ${locked ? 'disabled' : ''} 
+                class="${locked ? 'locked' : ''}" 
+                ondblclick="window.unlockCount(this)"
+                oninput="window.countInput(this)" 
+                onkeydown="window.countInput(event)">`;
+            tr.appendChild(td);
+        }
+
+        // 恢复状态
+        if (data?.counts?.some(c => c === '1')) {
+            updateRowState(tr);
+        }
+
+        tbody.appendChild(tr);
+    }
+
+    function updateRowState(tr) {
+        const remainInput = tr.cells[2].querySelector('input');
+        const remain = parseInt(remainInput.value) || 0;
+
+        const countInputs = tr.querySelectorAll('td:nth-child(n+5) input');
+        countInputs.forEach(input => {
+            if (input.value !== '1') {
+                input.disabled = remain === 0;
+            }
+        });
+
+        if (remain === 0) {
+            tr.classList.add('row-zero');
+        } else {
+            tr.classList.remove('row-zero');
+        }
+    }
+
+    // ===== 核心逻辑 =====
+    window.syncRemain = function(input) {
+        const row = input.closest('tr');
+        const postNum = parseInt(input.value) || 0;
+        const remainInput = row.cells[2].querySelector('input');
+        
+        // 保存历史
+        saveHistory();
+        
+        remainInput.value = postNum;
+
+        const countInputs = row.querySelectorAll('td:nth-child(n+5) input');
+        countInputs.forEach((item, index) => {
+            if (item.value !== '1') {
+                item.disabled = index >= postNum;
+            }
+        });
+
+        row.classList.remove('row-zero');
+        updateStats();
+        scheduleSave();
+    };
+
+    window.countInput = function(e) {
+        let input = e.target || e;
+        if (e.key && e.key !== '1') return;
+
+        // 保存历史
+        saveHistory();
+
+        input.value = '1';
+        input.disabled = true;
+        input.classList.add('locked');
+
+        const row = input.closest('tr');
+        const remainInput = row.cells[2].querySelector('input');
+        let remain = Math.max(0, (parseInt(remainInput.value) || 0) - 1);
+        remainInput.value = remain;
+
+        if (remain === 0) {
+            const countInputs = row.querySelectorAll('td:nth-child(n+5) input');
+            countInputs.forEach(item => {
+                if (item.value !== '1') {
+                    item.disabled = true;
+                }
+            });
+            row.classList.add('row-zero');
+        }
+
+        updateStats();
+        scheduleSave();
+    };
+
+    // 解锁计数框（双击）
+    window.unlockCount = function(input) {
+        if (!input.classList.contains('locked')) return;
+        
+        showModal('解锁计数框', '确定要解锁此计数框并恢复剩余量吗？', true, () => {
+            // 保存历史
+            saveHistory();
+            
+            input.value = '';
+            input.disabled = false;
+            input.classList.remove('locked');
+
+            const row = input.closest('tr');
+            const remainInput = row.cells[2].querySelector('input');
+            let remain = (parseInt(remainInput.value) || 0) + 1;
+            remainInput.value = remain;
+
+            row.classList.remove('row-zero');
+            updateRowState(row);
+            updateStats();
+            scheduleSave();
+        });
+    };
+
+    // 重置行
+    window.resetRow = function(btn) {
+        showModal('重置本行', '确定要清空本行所有计数并恢复剩余量吗？', true, () => {
+            saveHistory();
+            
+            const row = btn.closest('tr');
+            const numInput = row.cells[1].querySelector('input');
+            const remainInput = row.cells[2].querySelector('input');
+            const postNum = parseInt(numInput.value) || 0;
+            
+            remainInput.value = postNum;
+            
+            const countInputs = row.querySelectorAll('td:nth-child(n+5) input');
+            countInputs.forEach(input => {
+                input.value = '';
+                input.disabled = postNum === 0;
+                input.classList.remove('locked');
+            });
+
+            row.classList.remove('row-zero');
+            updateRowState(row);
+            updateStats();
+            scheduleSave();
+        });
+    };
+
+    // ===== 自动保存 =====
+    let saveTimer = null;
+    function scheduleSave() {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveData, CONFIG.AUTO_SAVE_DELAY);
+    }
+
+    // ===== 行列操作 =====
+    function addPostRow() {
+        saveHistory();
+        createRow();
+        updateStats();
+        scheduleSave();
+    }
+
+    function delPostRow() {
+        if (tbody.rows.length <= 1) {
+            showModal('无法删除', '至少保留1个岗位行！', false);
+            return;
+        }
+        saveHistory();
+        tbody.removeChild(tbody.lastElementChild);
+        updateStats();
+        scheduleSave();
+    }
+
+    function addCountCol() {
+        saveHistory();
+        state.countCols++;
+        const th = document.createElement('th');
+        th.textContent = '计' + state.countCols;
+        theadRow.appendChild(th);
+
+        // 在操作列之前插入新单元格
+        tbody.querySelectorAll('tr').forEach(row => {
+            const td = document.createElement('td');
+            td.innerHTML = '<input type="text" ondblclick="window.unlockCount(this)" oninput="window.countInput(this)" onkeydown="window.countInput(event)">';
+            // 插入到倒数第state.countCols个位置（操作列是第4列）
+            row.insertBefore(td, row.children[3 + state.countCols - 1]);
+        });
+
+        updateStats();
+        scheduleSave();
+    }
+
+    function clearAllData() {
+        showModal('清空所有数据', '⚠️ 确定要清空所有数据吗？此操作不可恢复！', true, () => {
+            localStorage.removeItem(CONFIG.STORAGE_KEY);
+            state.undoHistory = [];
+            state.countCols = CONFIG.INIT_COUNT_COLS;
+            state.rows = [];
+            tbody.innerHTML = '';
+            buildHeader();
+            for (let i = 0; i < CONFIG.INIT_POST_ROWS; i++) {
+                createRow();
+            }
+            updateStats();
+            showSaveStatus('saved');
+        });
+    }
+
+    // ===== 导入导出 =====
+    function exportData() {
+        const data = collectData();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `选岗统计_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function importData() {
+        $('fileInput').click();
+    }
+
+    $('fileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            try {
+                const data = JSON.parse(event.target.result);
+                if (data && data.rows) {
+                    saveHistory();
+                    applyData(data);
+                    saveData();
+                    showModal('导入成功', `已导入 ${data.rows.length} 条岗位数据！`, false);
+                }
+            } catch (err) {
+                showModal('导入失败', '文件格式错误，请选择正确的JSON文件！', false);
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+    });
+
+    // ===== 模态框 =====
+    function showModal(title, content, needConfirm = false, onConfirm = null) {
+        $('modalTitle').textContent = title;
+        $('modalContent').innerHTML = content;
+        $('modalOverlay').classList.add('show');
+
+        const confirmBtn = $('modalConfirm');
+        const cancelBtn = $('modalCancel');
+
+        // 清除旧事件
+        const newConfirm = confirmBtn.cloneNode(true);
+        const newCancel = cancelBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirm, confirmBtn);
+        cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+
+        if (needConfirm && onConfirm) {
+            newConfirm.style.display = 'inline-flex';
+            newConfirm.addEventListener('click', () => {
+                $('modalOverlay').classList.remove('show');
+                onConfirm();
+            });
+        } else {
+            newConfirm.style.display = 'none';
+        }
+
+        newCancel.addEventListener('click', () => {
+            $('modalOverlay').classList.remove('show');
+        });
+    }
+
+    // 点击遮罩关闭
+    $('modalOverlay').addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.classList.remove('show');
+        }
+    });
+
+    // ===== 使用说明折叠 =====
+    $('helpHeader').addEventListener('click', function() {
+        this.classList.toggle('collapsed');
+        $('helpContent').classList.toggle('collapsed');
+    });
+
+    // ===== 打印 =====
+    function printPage() {
+        window.print();
+    }
+
+    // ===== 快捷键 =====
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+Z 撤销
+        if (e.ctrlKey && e.key === 'z') {
+            e.preventDefault();
+            undo();
+        }
+        // Ctrl+S 保存
+        if (e.ctrlKey && e.key === 's') {
+            e.preventDefault();
+            saveData();
+            showModal('保存成功', '数据已手动保存！', false);
+        }
+    });
+
+    // ===== 初始化 =====
+    function init() {
+        // 绑定按钮事件
+        $('addPostBtn').addEventListener('click', addPostRow);
+        $('delPostBtn').addEventListener('click', delPostRow);
+        $('addColBtn').addEventListener('click', addCountCol);
+        $('exportBtn').addEventListener('click', exportData);
+        $('importBtn').addEventListener('click', importData);
+        $('clearBtn').addEventListener('click', clearAllData);
+        $('printBtn').addEventListener('click', printPage);
+        $('undoBtn').addEventListener('click', undo);
+
+        // 加载或初始化数据
+        const savedData = loadData();
+        if (savedData) {
+            applyData(savedData);
+        } else {
+            buildHeader();
+            for (let i = 0; i < CONFIG.INIT_POST_ROWS; i++) {
+                createRow();
+            }
+            updateStats();
+        }
+
+        // 监听输入变化自动保存
+        document.addEventListener('input', scheduleSave);
+    }
+
+    // 启动
+    init();
+})();
+</script>
+</body>
+</html>
